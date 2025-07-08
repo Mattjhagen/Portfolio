@@ -60,7 +60,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   if (process.env.NODE_ENV === "development") {
-    const port = 5000;
+    const port = process.env.PORT || 5000;
     server.listen(
       {
         port,
