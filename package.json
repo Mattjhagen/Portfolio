@@ -9,7 +9,7 @@
   --platform=node \
   --bundle \
   --format=esm \
-  --outfile=dist/index.js"
+  --outfile=dist/index.js",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push"
