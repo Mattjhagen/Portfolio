@@ -1,14 +1,27 @@
-// portfolio/server/vite.ts
-import { defineConfig } from 'vite'
+// server/vite.ts
 
-export default defineConfig({
+import { createServer as createViteServer, createLogger } from "vite";
+import express from "express";
+import fs from "fs";
+import path from "path";
+import { nanoid } from "nanoid";
+
+// Minimal inline Vite config for server-side
+import { defineConfig } from "vite";
+const viteConfig = defineConfig({
   css: {
-    transformer: 'esbuild',
+    transformer: "esbuild",
   },
   build: {
-    cssMinify: 'esbuild',
+    cssMinify: "esbuild",
   },
-})
+});
+
+const viteLogger = createLogger();
+
+export async function setupVite(app: express.Express, server: import("http").Server) {
+  const vite = await createViteServer({
+    ...viteConfig,
     configFile: false,
     customLogger: {
       ...viteLogger,
@@ -17,49 +30,38 @@ export default defineConfig({
         process.exit(1);
       },
     },
-    server: serverOptions,
+    server: {
+      middlewareMode: true,
+      hmr: { server },
+      allowedHosts: true,
+    },
     appType: "custom",
   });
 
   app.use(vite.middlewares);
+
   app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
-
     try {
-      const clientTemplate = path.resolve(
-        import.meta.dirname,
-        "..",
-        "client",
-        "index.html",
-      );
-
-      // always reload the index.html file from disk incase it changes
+      const url = req.originalUrl;
+      const clientTemplate = path.resolve(__dirname, "..", "client", "index.html");
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`,
-      );
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
+      template = template.replace(`src="/src/main.tsx"`, `src="/src/main.tsx?v=${nanoid()}"`);
+      const html = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(html);
+    } catch (e: any) {
+      vite.ssrFixStacktrace(e);
       next(e);
     }
   });
 }
 
-export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
-
+export function serveStatic(app: express.Express) {
+  const distPath = path.resolve(__dirname, "..", "dist", "public");
   if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+    throw new Error(`Build directory not found: ${distPath}`);
   }
 
   app.use(express.static(distPath));
-
-  // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
