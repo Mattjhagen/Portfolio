@@ -3,11 +3,11 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   css: {
-    // Force CSS to be processed by esbuild
+    // Use Esbuild for CSS processing instead of Lightning CSS
     transformer: 'esbuild',
   },
   build: {
-    // Ensure esbuild is used for CSS minification as well
+    // Ensure Esbuild is used for CSS minification
     cssMinify: 'esbuild',
   },
 })
